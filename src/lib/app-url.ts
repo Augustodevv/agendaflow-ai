@@ -40,3 +40,16 @@ export function trustedOrigins(env: Env = process.env): string[] {
   }
   return [...origins];
 }
+
+/**
+ * Origem da própria requisição (esquema + host que o navegador usou para chegar aqui).
+ * Aceitar a origem quando ela é igual ao host que recebeu a chamada é a verificação padrão de mesma origem:
+ * um site de terceiros envia outro Origin, então continua bloqueado.
+ */
+export function requestOrigin(request?: Request): string | null {
+  if (!request) return null;
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (!host) return null;
+  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ?? new URL(request.url).protocol.replace(":", "");
+  return `${proto}://${host}`;
+}
