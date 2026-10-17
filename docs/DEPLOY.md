@@ -46,3 +46,12 @@ A migração `booking_no_overlap` cria a extensão `btree_gist`, que o Supabase 
 
 ## Alternativa sem digitar a senha do banco (integração Supabase na Vercel)
 Em **Integrations > Supabase**, instale a integração, vincule ao projeto da Vercel e escolha o projeto do Supabase. A Vercel cria `POSTGRES_PRISMA_URL` (pooler, pronta para serverless) e o app a usa quando `DATABASE_URL` não existe (`src/lib/db.ts`). Assim você só precisa definir `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` e `NEXT_PUBLIC_APP_URL`.
+
+## Como o deploy de demonstração foi montado (Vercel + Neon)
+- Banco: **Neon** (plano gratuito), criado por **Storage > Create Database** na Vercel e ligado ao projeto com o prefixo `DATABASE`. A Vercel injeta `DATABASE_URL` (pooler) e `DATABASE_URL_UNPOOLED` (conexão direta) sozinha, sem ninguém digitar senha.
+- Build Command do projeto (Settings > Build and Deployment > Override):
+  `DATABASE_URL="$DATABASE_URL_UNPOOLED" npx prisma migrate deploy && next build`
+  Aplica as migrações pela conexão direta (o Prisma precisa dela) e depois compila. É idempotente.
+- Variáveis não secretas: `BETTER_AUTH_URL` e `NEXT_PUBLIC_APP_URL` com a URL do site.
+- `BETTER_AUTH_SECRET` não é necessário: o app deriva a chave de sessão da conexão do banco (`src/lib/auth-secret.ts`). Trocar a senha do banco desloga todos.
+- Atenção: previews de PR usam o mesmo banco e rodam as mesmas migrações. Para um produto real, use um banco separado para previews.
