@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appUrl } from "@/lib/app-url";
+import { appUrl, trustedOrigins } from "@/lib/app-url";
 
 describe("appUrl", () => {
   it("em produção na Vercel usa o domínio informado pela plataforma, ignorando a variável digitada", () => {
@@ -18,5 +18,31 @@ describe("appUrl", () => {
 
   it("sem nada configurado, usa localhost", () => {
     expect(appUrl({})).toBe("http://localhost:3000");
+  });
+});
+
+describe("trustedOrigins", () => {
+  const vercel = {
+    VERCEL_ENV: "production",
+    VERCEL_GIT_REPO_SLUG: "agendaflow-ai",
+    VERCEL_URL: "agendaflow-ai-abc123xyz-augusto-7334.vercel.app",
+    VERCEL_PROJECT_PRODUCTION_URL: "agendaflow-ai-augusto-7334.vercel.app",
+  };
+
+  it("aceita o alias do time, o deploy e os previews do próprio projeto", () => {
+    const list = trustedOrigins(vercel);
+    expect(list).toContain("https://agendaflow-ai-augusto-7334.vercel.app");
+    expect(list).toContain("https://agendaflow-ai-abc123xyz-augusto-7334.vercel.app");
+    expect(list).toContain("https://agendaflow-ai-*-augusto-7334.vercel.app");
+  });
+
+  it("não aceita domínios de outros projetos", () => {
+    const list = trustedOrigins(vercel);
+    expect(list).not.toContain("https://agendaflow-ai.vercel.app");
+    expect(list.some((o) => o.includes("evil"))).toBe(false);
+  });
+
+  it("fora da Vercel, só a URL configurada", () => {
+    expect(trustedOrigins({ NEXT_PUBLIC_APP_URL: "https://exemplo.com" })).toEqual(["https://exemplo.com"]);
   });
 });
