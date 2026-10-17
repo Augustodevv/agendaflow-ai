@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import type { Plan, SubscriptionStatus } from "@/generated/prisma/client";
+import { appUrl } from "@/lib/app-url";
 import { db } from "@/lib/db";
 import { planFromPriceId } from "./plans";
 import { getStripe } from "./stripe";
@@ -87,10 +88,6 @@ export async function processStripeEvent(event: Stripe.Event): Promise<"processe
         return "ignored" as const;
     }
   });
-}
-
-function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 }
 
 /** Cria a sessão de pagamento do Stripe (página hospedada pelo Stripe: não tocamos em dados de cartão). */

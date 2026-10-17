@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { formatDate, formatTime } from "@/lib/time";
 
 export type ReminderData = {
@@ -11,9 +12,7 @@ export type ReminderData = {
   manageUrl: string;
 };
 
-export function appUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
-}
+export { appUrl };
 
 export function manageUrl(slug: string, token: string): string {
   return `${appUrl()}/agendar/${slug}/reserva/${token}`;
