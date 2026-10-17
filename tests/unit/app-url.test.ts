@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appUrl, trustedOrigins } from "@/lib/app-url";
+import { appUrl, requestOrigin, trustedOrigins } from "@/lib/app-url";
 
 describe("appUrl", () => {
   it("em produção na Vercel usa o domínio informado pela plataforma, ignorando a variável digitada", () => {
@@ -44,5 +44,21 @@ describe("trustedOrigins", () => {
 
   it("fora da Vercel, só a URL configurada", () => {
     expect(trustedOrigins({ NEXT_PUBLIC_APP_URL: "https://exemplo.com" })).toEqual(["https://exemplo.com"]);
+  });
+});
+
+describe("requestOrigin", () => {
+  it("usa o host que o navegador usou", () => {
+    const req = new Request("https://interno.local/api/auth/x", { headers: { host: "meu-site.vercel.app", "x-forwarded-proto": "https" } });
+    expect(requestOrigin(req)).toBe("https://meu-site.vercel.app");
+  });
+
+  it("prefere x-forwarded-host quando existe", () => {
+    const req = new Request("http://interno/x", { headers: { "x-forwarded-host": "publico.com", "x-forwarded-proto": "https" } });
+    expect(requestOrigin(req)).toBe("https://publico.com");
+  });
+
+  it("sem requisição, devolve null", () => {
+    expect(requestOrigin(undefined)).toBeNull();
   });
 });
