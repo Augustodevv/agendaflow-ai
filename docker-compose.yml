@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: agendaflow
+      POSTGRES_PASSWORD: agendaflow_dev
+      POSTGRES_DB: agendaflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

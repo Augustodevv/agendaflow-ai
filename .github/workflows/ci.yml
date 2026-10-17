@@ -1,0 +1,38 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: agendaflow
+          POSTGRES_PASSWORD: agendaflow_ci
+          POSTGRES_DB: agendaflow
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agendaflow" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://agendaflow:agendaflow_ci@localhost:5432/agendaflow
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production-0000
+      BETTER_AUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+        continue-on-error: true
