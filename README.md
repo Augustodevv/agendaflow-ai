@@ -140,5 +140,8 @@ Honestamente, o código está pronto, mas estes passos precisam de contas e deci
 5. **Revisão jurídica** da política de privacidade e dos termos, e conta de WhatsApp Business para os lembretes automáticos.
 6. **Validação comercial**: usar com 5 negócios reais antes de cobrar.
 
+## Deploy
+Guia em [docs/DEPLOY.md](docs/DEPLOY.md) (Vercel + PostgreSQL gerenciado). Ainda não foi executado: o projeto não está no ar.
+
 ## Licença
 Código-fonte disponível para avaliação, **não** livre para uso comercial. Veja [LICENSE](LICENSE).
