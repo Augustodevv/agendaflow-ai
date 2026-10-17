@@ -2,7 +2,7 @@
 
 SaaS de agendamento para barbearias e profissionais de beleza. Os clientes reservam por uma página pública, sem criar conta, e o dono acompanha agenda e indicadores num painel.
 
-> **Status: Fase 4 concluída.** O produto já funciona de ponta a ponta: o dono cadastra serviços, profissionais e jornada; o cliente reserva pela página pública; o dono acompanha agenda e indicadores. Lembretes por WhatsApp, cancelamento pelo cliente e proteções de segurança já funcionam. Assinaturas, deploy e IA ainda **não** foram implementados. Veja o [roadmap](#roadmap).
+> **Status: Fases 1 a 4 concluídas, mais landing page e páginas legais da Fase 5.** O produto já funciona de ponta a ponta: o dono cadastra serviços, profissionais e jornada; o cliente reserva pela página pública; o dono acompanha agenda e indicadores. Lembretes por WhatsApp, cancelamento pelo cliente e proteções de segurança já funcionam. Assinaturas, deploy e IA ainda **não** foram implementados (o projeto ainda não está no ar). Veja o [roadmap](#roadmap).
 
 ## O que já funciona
 - **Painel do dono** (`/painel`): indicadores do dia e do mês (atendimentos, faturamento, taxa de faltas, clientes novos), próximos horários, checklist de configuração e link da página de reservas.
@@ -91,7 +91,7 @@ erDiagram
 - [x] Fase 2: fundação (auth, organização, banco, CI)
 - [x] Fase 3: serviços, profissionais, disponibilidade, agenda, página pública, dashboard
 - [x] Fase 4: lembretes por WhatsApp, cancelamento pelo cliente, segurança, acessibilidade
-- [ ] Fase 5: landing, assinaturas, deploy
+- [ ] Fase 5: landing e páginas legais (feitas); assinaturas e deploy (pendentes)
 - [ ] Fase 6: IA
 - [ ] Fase 7: documentação final e demonstração
 
