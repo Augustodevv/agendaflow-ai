@@ -43,3 +43,6 @@ A migração `booking_no_overlap` cria a extensão `btree_gist`, que o Supabase 
 ## 5. Depois do primeiro deploy
 - Stripe em modo teste: preencha as variáveis do README e aponte o webhook para `https://<seu-site>/api/webhooks/stripe`.
 - Monitoramento de erros e backups do banco antes de aceitar clientes reais.
+
+## Alternativa sem digitar a senha do banco (integração Supabase na Vercel)
+Em **Integrations > Supabase**, instale a integração, vincule ao projeto da Vercel e escolha o projeto do Supabase. A Vercel cria `POSTGRES_PRISMA_URL` (pooler, pronta para serverless) e o app a usa quando `DATABASE_URL` não existe (`src/lib/db.ts`). Assim você só precisa definir `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` e `NEXT_PUBLIC_APP_URL`.
