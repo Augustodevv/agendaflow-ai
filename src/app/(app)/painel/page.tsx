@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/action-form";
@@ -26,7 +27,7 @@ export default async function Page() {
   const { organization } = await requireOrg();
   const tz = organization.timezone;
   const data = await getDashboard(organization.id, tz);
-  const publicUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/agendar/${organization.slug}`;
+  const publicUrl = `${appUrl()}/agendar/${organization.slug}`;
   const steps = [
     { done: data.setup.hasServices, label: "Cadastre seus serviços", href: "/painel/servicos" },
     { done: data.setup.hasStaff, label: "Adicione quem atende", href: "/painel/profissionais" },
