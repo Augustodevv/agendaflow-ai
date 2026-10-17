@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   poweredByHeader: false,
+  // O cliente do Prisma é gerado em src/generated/prisma. Sem isto, o motor (.node) não vai para o servidor da Vercel.
+  outputFileTracingIncludes: { "/**/*": ["./src/generated/prisma/**/*"] },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
