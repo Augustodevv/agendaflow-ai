@@ -2,7 +2,19 @@
 
 SaaS de agendamento para barbearias e profissionais de beleza. Os clientes reservam por uma página pública, sem criar conta, e o dono acompanha agenda e indicadores num painel.
 
-> **Status: Fases 1 a 4 concluídas, mais landing page e páginas legais da Fase 5.** O produto já funciona de ponta a ponta: o dono cadastra serviços, profissionais e jornada; o cliente reserva pela página pública; o dono acompanha agenda e indicadores. Lembretes por WhatsApp, cancelamento pelo cliente e proteções de segurança já funcionam. Assinaturas, deploy e IA ainda **não** foram implementados (o projeto ainda não está no ar). Veja o [roadmap](#roadmap).
+> **Status: código das Fases 1 a 6 escrito e testado; ainda não está no ar.** O núcleo (reservas, agenda, painel, lembretes) foi exercitado de ponta a ponta nos testes automatizados. A **cobrança com Stripe** e a **IA** estão implementadas e testadas com simulações, mas **ainda não foram verificadas contra o Stripe nem contra o provedor de IA reais**, porque dependem de contas e chaves. Também falta o deploy. Veja [o que falta](#o-que-falta-antes-de-vender).
+
+## Capturas de tela
+
+| Painel | Agenda |
+|---|---|
+| ![Painel do dono](docs/screenshots/painel.png) | ![Agenda do dia](docs/screenshots/agenda.png) |
+
+| Reserva no celular | Planos |
+|---|---|
+| ![Escolha de horário no celular](docs/screenshots/reserva-horarios-celular.png) | ![Planos e preços](docs/screenshots/precos.png) |
+
+Dados de demonstração (negócio fictício) gerados por `npm run screenshots`.
 
 ## O que já funciona
 - **Painel do dono** (`/painel`): indicadores do dia e do mês (atendimentos, faturamento, taxa de faltas, clientes novos), próximos horários, checklist de configuração e link da página de reservas.
@@ -21,6 +33,25 @@ SaaS de agendamento para barbearias e profissionais de beleza. Os clientes reser
    `Olá, {{1}}! Lembrete do seu horário em {{2}}: {{3}}, {{4}}. Se não puder vir, cancele aqui: {{5}}`
 3. Preencha `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_REMINDER_TEMPLATE` e `CRON_SECRET` no `.env`.
 
+### Planos e assinatura
+- **Planos** (`src/modules/billing/plans.ts`): Grátis, Starter R$ 39, Pro R$ 79 e Business R$ 149 por mês. Preços e limites ficam num arquivo só e são hipóteses iniciais.
+- **Limites por plano**: número de profissionais, lembrete automático por WhatsApp e gerações de IA por mês.
+- **Cobrança só liga com o Stripe configurado.** Sem `STRIPE_SECRET_KEY`, tudo é gratuito e sem limite de profissionais (fase de lançamento), e a tela de assinatura avisa isso.
+- **Checkout e portal** são páginas do Stripe: o sistema nunca vê nem guarda dados de cartão. O cliente troca cartão e cancela pelo portal.
+- **Webhook** (`POST /api/webhooks/stripe`): confere a assinatura do Stripe, processa cada evento uma única vez (mesmo com entregas simultâneas) e desfaz tudo se algo falhar, para o Stripe reenviar. Pagamento falho mantém o plano e mostra aviso; cancelamento volta para o Grátis.
+
+### Assistente de IA (`/painel/ia`)
+- **Resumo dos últimos 30 dias**, **ideias para ocupar a agenda** e **mensagem de confirmação ou reagendamento** para um cliente.
+- A IA recebe só números reais calculados do banco, e só o primeiro nome do cliente (nunca telefone). As instruções proíbem inventar métricas e prometer resultado financeiro.
+- Chamadas só no servidor. Cota mensal por plano reservada de forma atômica, limite de 10 por minuto por negócio, estorno da cota quando o provedor falha e registro de tokens por mês.
+- Modelo configurável por `AI_MODEL` (padrão `claude-haiku-5-5`).
+
+### Ligar Stripe e IA (modo teste primeiro)
+1. No Stripe, em **modo de teste**, crie 3 preços recorrentes mensais em BRL e copie os IDs `price_...` para `STRIPE_PRICE_STARTER/PRO/BUSINESS`.
+2. Copie a chave `sk_test_...` para `STRIPE_SECRET_KEY`.
+3. Aponte um webhook para `/api/webhooks/stripe` com os eventos `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` e `checkout.session.completed`, e copie o segredo `whsec_...` para `STRIPE_WEBHOOK_SECRET`. Localmente: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`.
+4. Para a IA, preencha `ANTHROPIC_API_KEY`. A IA fica disponível a partir do plano Starter.
+
 ## Segurança
 - Cabeçalhos: CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS; sem `X-Powered-By`.
 - Limite de reservas por rede (8 a cada 10 min) e por telefone (4 por hora), guardado no PostgreSQL; o IP é salvo só como hash.
@@ -29,7 +60,7 @@ SaaS de agendamento para barbearias e profissionais de beleza. Os clientes reser
 - Link da reserva com token aleatório (UUID), fora dos buscadores e sem vazar no Referer.
 
 ## Stack
-Next.js (App Router) · React · TypeScript · Tailwind CSS · PostgreSQL · Prisma · Better Auth · Zod · Vitest
+Next.js (App Router) · React · TypeScript · Tailwind CSS · PostgreSQL · Prisma · Better Auth · Zod · Stripe · Anthropic SDK · Vitest · Playwright
 
 ## Como rodar
 Requisitos: Node 22+ e Docker **ou** o banco embutido do projeto.
@@ -58,6 +89,9 @@ Cobrem:
 - **Lembretes**: só reservas confirmadas nas próximas 24 h, sem duplicar (inclusive com duas execuções ao mesmo tempo) e com nova tentativa após falha.
 - **Cancelamento pelo cliente**: só com o token certo, só da própria empresa e só antes do horário.
 - **Limite de tentativas**: bloqueia depois do limite e libera quando a janela passa.
+- **Webhook do Stripe**: assinatura válida/adulterada, evento repetido e simultâneo processado uma vez, pagamento falho, cancelamento, falha que desfaz tudo e isolamento entre empresas (com eventos simulados, não o Stripe real).
+- **Cota de IA**: 10 chamadas simultâneas com limite 3 aceitam só 3, plano sem IA é recusado antes do modelo, erro do provedor devolve a cota (com modelo simulado, não o provedor real).
+- **Planos**: limites por plano, direito ao plano conforme o status da assinatura e prompts da IA sem telefone e sem números inventados.
 - **E2E**: cadastro, configuração, reserva, link de lembrete, cancelamento pelo cliente e pelo dono, cabeçalhos de segurança e **acessibilidade (axe, WCAG A/AA)** nas telas principais, em desktop e celular.
 
 ## Decisões de arquitetura
@@ -91,9 +125,20 @@ erDiagram
 - [x] Fase 2: fundação (auth, organização, banco, CI)
 - [x] Fase 3: serviços, profissionais, disponibilidade, agenda, página pública, dashboard
 - [x] Fase 4: lembretes por WhatsApp, cancelamento pelo cliente, segurança, acessibilidade
-- [ ] Fase 5: landing e páginas legais (feitas); assinaturas e deploy (pendentes)
-- [ ] Fase 6: IA
+- [x] Fase 5 (código): landing, páginas legais, preços, assinatura com Stripe, limites por plano
+- [ ] Fase 5 (operação): deploy, Stripe em modo teste verificado de ponta a ponta, monitoramento de erros
+- [x] Fase 6 (código): resumo, ideias de ocupação e mensagens, com limites e registro de uso
+- [ ] Fase 6 (operação): validar com um provedor real e acompanhar custo por cliente
 - [ ] Fase 7: documentação final e demonstração
+
+## O que falta antes de vender
+Honestamente, o código está pronto, mas estes passos precisam de contas e decisões suas:
+1. **Deploy** (ex.: Vercel + PostgreSQL gerenciado) e variáveis de ambiente de produção.
+2. **Stripe em modo teste**: rodar o checkout e o webhook de verdade e conferir o plano mudando. Só depois ativar o modo real.
+3. **IA com chave real**: testar os três recursos e medir o custo por geração para validar a margem de cada plano.
+4. **Monitoramento de erros** (ex.: Sentry) e backups do banco.
+5. **Revisão jurídica** da política de privacidade e dos termos, e conta de WhatsApp Business para os lembretes automáticos.
+6. **Validação comercial**: usar com 5 negócios reais antes de cobrar.
 
 ## Licença
 Código-fonte disponível para avaliação, **não** livre para uso comercial. Veja [LICENSE](LICENSE).
