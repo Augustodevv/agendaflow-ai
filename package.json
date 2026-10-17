@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "db:dev": "tsx scripts/dev-db.ts",
     "db:migrate": "prisma migrate dev"
   },
@@ -23,6 +24,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",
     "@types/react": "^19",

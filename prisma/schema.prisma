@@ -229,6 +229,9 @@ model Booking {
   status         BookingStatus @default(CONFIRMED)
   priceCents     Int
   cancelledAt    DateTime?
+  // Link secreto para o cliente ver/cancelar a reserva sem login.
+  manageToken    String        @unique @default(dbgenerated("gen_random_uuid()::text"))
+  reminderSentAt DateTime?
   createdAt      DateTime      @default(now())
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   staff          Staff         @relation(fields: [staffId], references: [id])
@@ -237,4 +240,16 @@ model Booking {
 
   @@index([organizationId, startsAt])
   @@index([staffId, startsAt])
+  @@index([status, reminderSentAt, startsAt])
+}
+
+// ---------- Proteção contra abuso ----------
+
+// Janela deslizante simples no próprio PostgreSQL: funciona em servidores sem estado (serverless).
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
 }
