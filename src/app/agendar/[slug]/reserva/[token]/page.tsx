@@ -3,19 +3,25 @@ export const instant = false;
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActionForm, SubmitButton } from "@/components/action-form";
 import { formatCents } from "@/lib/money";
 import { formatDate, formatTime } from "@/lib/time";
-import { getPublicBooking } from "@/modules/bookings/service";
+import { cancelPublicBookingAction } from "@/modules/bookings/actions";
+import { getBookingByToken } from "@/modules/bookings/service";
 
-export const metadata: Metadata = { title: "Agendamento confirmado", robots: { index: false } };
+// Link secreto: não deve aparecer em buscadores nem vazar no Referer.
+export const metadata: Metadata = { title: "Seu agendamento", robots: { index: false, follow: false }, referrer: "no-referrer" };
 
-export default async function Page({ params, searchParams }: PageProps<"/agendar/[slug]/confirmado">) {
-  const { slug } = await params;
-  const { id } = await searchParams;
-  const booking = typeof id === "string" ? await getPublicBooking(slug, id) : null;
+export default async function Page({ params, searchParams }: PageProps<"/agendar/[slug]/reserva/[token]">) {
+  const { slug, token } = await params;
+  const { nova } = await searchParams;
+  const booking = await getBookingByToken(slug, token);
   if (!booking) notFound();
+
   const tz = booking.organization.timezone;
   const cancelled = booking.status === "CANCELLED";
+  const canCancel = (booking.status === "CONFIRMED" || booking.status === "PENDING") && booking.startsAt > new Date();
+  const title = cancelled ? "Agendamento cancelado" : nova ? "Horário reservado!" : "Seu agendamento";
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-4 py-10">
@@ -23,7 +29,7 @@ export default async function Page({ params, searchParams }: PageProps<"/agendar
         <div aria-hidden className={`mx-auto grid size-14 place-items-center rounded-full text-2xl ${cancelled ? "bg-danger/10 text-danger" : "bg-brand/10 text-brand"}`}>
           {cancelled ? "×" : "✓"}
         </div>
-        <h1 className="text-2xl font-semibold">{cancelled ? "Agendamento cancelado" : "Horário reservado!"}</h1>
+        <h1 className="text-2xl font-semibold">{title}</h1>
         <p className="text-muted">{booking.organization.name}</p>
       </div>
       <dl className="divide-y divide-border rounded-xl border border-border bg-card text-sm">
@@ -39,6 +45,23 @@ export default async function Page({ params, searchParams }: PageProps<"/agendar
           </div>
         ))}
       </dl>
+
+      {nova && !cancelled && (
+        <p className="rounded-lg bg-brand/5 px-4 py-3 text-center text-sm text-muted">
+          Guarde este link: por ele você pode cancelar se não puder vir.
+        </p>
+      )}
+
+      {canCancel && (
+        <ActionForm action={cancelPublicBookingAction} confirmMessage="Cancelar este agendamento?" className="space-y-2 text-center">
+          <input type="hidden" name="slug" value={slug} />
+          <input type="hidden" name="token" value={token} />
+          <SubmitButton variant="ghost" pendingLabel="Cancelando..." className="w-full">
+            Não vou poder ir, cancelar
+          </SubmitButton>
+        </ActionForm>
+      )}
+
       {booking.organization.phone && !cancelled && (
         <a
           href={`https://wa.me/55${booking.organization.phone}`}
@@ -50,7 +73,7 @@ export default async function Page({ params, searchParams }: PageProps<"/agendar
         </a>
       )}
       <Link href={`/agendar/${slug}`} className="text-center text-sm text-brand">
-        Fazer outro agendamento
+        {cancelled ? "Escolher outro horário" : "Fazer outro agendamento"}
       </Link>
     </main>
   );

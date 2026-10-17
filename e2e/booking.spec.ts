@@ -1,4 +1,12 @@
-import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Page } from "@playwright/test";
+
+/** Falha se a página tiver problemas de acessibilidade graves ou críticos (WCAG A/AA). */
+async function expectAccessible(page: Page) {
+  const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  const serious = violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+  expect(serious.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
+}
 
 const tomorrow = () => {
   const d = new Date(Date.now() + 86_400_000);
@@ -8,6 +16,7 @@ const tomorrow = () => {
 test("dono configura o negócio, cliente reserva e dono vê na agenda", async ({ page }, info) => {
   const id = `${Date.now()}-${info.project.name}`;
   const business = `Barbearia E2E ${id}`;
+  const phone = `119${String(Date.now()).slice(-8)}`;
 
   // Cadastro e criação do negócio
   await page.goto("/cadastro");
@@ -19,6 +28,7 @@ test("dono configura o negócio, cliente reserva e dono vê na agenda", async ({
   await page.getByRole("button", { name: "Continuar" }).click();
   await expect(page.getByRole("heading", { name: "Início" })).toBeVisible();
   await expect(page.getByText("Deixe sua página de reservas pronta")).toBeVisible();
+  await expectAccessible(page);
 
   // Serviço
   await page.getByRole("link", { name: "Serviços", exact: true }).click();
@@ -62,24 +72,52 @@ test("dono configura o negócio, cliente reserva e dono vê na agenda", async ({
   await page.waitForURL(new RegExp(`data=${date}`));
   await page.getByRole("link", { name: "10:00", exact: true }).click();
   await page.getByLabel("Seu nome").fill("Cliente E2E");
-  await page.getByLabel("WhatsApp").fill("(11) 91234-5678");
+  await page.getByLabel("WhatsApp").fill(phone);
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Confirmar agendamento" }).click();
   await expect(page.getByRole("heading", { name: "Horário reservado!" })).toBeVisible();
   await expect(page.locator("dd", { hasText: "Corte degradê" })).toBeVisible();
+  await expectAccessible(page);
+  const manageLink = page.url().replace("?nova=1", "");
 
   // O horário some da grade
   await page.goto(`${publicUrl}?${new URLSearchParams({ data: date })}`);
   await page.getByRole("link", { name: /Corte degradê/ }).click();
   await expect(page.getByRole("link", { name: "10:00", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "10:30", exact: true })).toBeVisible();
+  await expectAccessible(page);
+
+  // Dono vê a reserva com o botão de lembrete
+  await page.goto(`/painel/agenda?data=${date}`);
+  await expect(page.getByText("Cliente E2E")).toBeVisible();
+  const reminder = page.getByRole("link", { name: "Enviar lembrete" });
+  const href = (await reminder.getAttribute("href")) ?? "";
+  expect(href.startsWith(`https://wa.me/55${phone}?text=`)).toBe(true);
+  expect(decodeURIComponent(href)).toContain("/reserva/");
+  await expectAccessible(page);
+
+  // Cliente cancela pelo link secreto e o horário volta para a grade
+  await page.goto(manageLink);
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: /cancelar/ }).click();
+  await expect(page.getByRole("heading", { name: "Agendamento cancelado" })).toBeVisible();
+  await page.goto(`${publicUrl}?${new URLSearchParams({ data: date })}`);
+  await page.getByRole("link", { name: /Corte degradê/ }).click();
+  await expect(page.getByRole("link", { name: "10:00", exact: true })).toBeVisible();
+
+  // Nova reserva no mesmo horário, agora cancelada pelo dono
+  await page.getByRole("link", { name: "10:00", exact: true }).click();
+  await page.getByLabel("Seu nome").fill("Cliente E2E");
+  await page.getByLabel("WhatsApp").fill(phone);
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Confirmar agendamento" }).click();
+  await expect(page.getByRole("heading", { name: "Horário reservado!" })).toBeVisible();
 
   // Dono vê e cancela na agenda
   await page.goto(`/painel/agenda?data=${date}`);
-  await expect(page.getByText("Cliente E2E")).toBeVisible();
   page.once("dialog", (d) => d.accept());
-  await page.getByRole("button", { name: "Cancelar" }).click();
-  await expect(page.getByText("Cancelado", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(page.getByText("Cancelado", { exact: true })).toHaveCount(2);
 
   // Id de outra empresa (ou inexistente) não abre
   await page.goto("/painel/profissionais/nao-existe");
@@ -89,4 +127,16 @@ test("dono configura o negócio, cliente reserva e dono vê na agenda", async ({
 test("página de negócio inexistente mostra a tela de não encontrado", async ({ page }) => {
   await page.goto("/agendar/negocio-que-nao-existe-123");
   await expect(page.getByRole("heading", { name: "Página não encontrada" })).toBeVisible();
+});
+
+test("envia cabeçalhos de segurança", async ({ request }) => {
+  const res = await request.get("/");
+  expect(res.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(res.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(res.headers()["x-powered-by"]).toBeUndefined();
+});
+
+test("rota de lembretes exige o segredo", async ({ request }) => {
+  expect((await request.get("/api/cron/lembretes")).status()).toBe(401);
+  expect((await request.get("/api/cron/lembretes", { headers: { authorization: "Bearer errado" } })).status()).toBe(401);
 });

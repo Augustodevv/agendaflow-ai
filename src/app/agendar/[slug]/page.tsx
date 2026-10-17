@@ -124,7 +124,7 @@ export default async function Page({ params, searchParams }: PageProps<"/agendar
               <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
                 {Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(today, i)).map((d) => (
                   <Link key={d} href={link({ data: d, horario: undefined })} className={`${pill(d === date)} shrink-0 text-center`} aria-current={d === date ? "date" : undefined}>
-                    <span className="block text-xs capitalize opacity-80">{i18nWeekday(d, today)}</span>
+                    <span className={`block text-xs capitalize ${d === date ? "" : "text-muted"}`}>{i18nWeekday(d, today)}</span>
                     <span className="block font-medium">{formatIsoDate(d, { day: "2-digit", month: "2-digit" })}</span>
                   </Link>
                 ))}

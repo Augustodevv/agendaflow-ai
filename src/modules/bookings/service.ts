@@ -10,7 +10,7 @@ export function isOverlapError(e: unknown): boolean {
   return text.includes("booking_no_overlap") || text.includes("23P01");
 }
 
-export type BookingResult = { ok: true; bookingId: string } | { ok: false; error: string };
+export type BookingResult = { ok: true; bookingId: string; manageToken: string } | { ok: false; error: string };
 
 const TAKEN = "Esse horário acabou de ser reservado. Escolha outro, por favor.";
 
@@ -61,7 +61,7 @@ export async function createPublicBooking(slug: string, input: PublicBookingInpu
           status: "CONFIRMED",
         },
       });
-      return { ok: true, bookingId: booking.id };
+      return { ok: true, bookingId: booking.id, manageToken: booking.manageToken };
     } catch (e) {
       if (!isOverlapError(e)) throw e;
     }
@@ -69,11 +69,21 @@ export async function createPublicBooking(slug: string, input: PublicBookingInpu
   return { ok: false, error: TAKEN };
 }
 
-export function getPublicBooking(slug: string, id: string) {
+/** Reserva acessada pelo link secreto (confirmação, lembrete). */
+export function getBookingByToken(slug: string, token: string) {
   return db.booking.findFirst({
-    where: { id, organization: { slug } },
+    where: { manageToken: token, organization: { slug } },
     include: { service: true, staff: true, organization: true },
   });
+}
+
+/** O próprio cliente cancela pelo link, até o horário marcado. */
+export async function cancelByCustomer(slug: string, token: string, now = new Date()) {
+  const { count } = await db.booking.updateMany({
+    where: { manageToken: token, organization: { slug }, status: { in: ["CONFIRMED", "PENDING"] }, startsAt: { gt: now } },
+    data: { status: "CANCELLED", cancelledAt: now },
+  });
+  return count === 1;
 }
 
 /** Reservas de um dia da agenda (no fuso da organização). */

@@ -8,6 +8,7 @@ import { addDays, formatIsoDate, formatTime, isIsoDate, localParts } from "@/lib
 import { updateBookingStatusAction } from "@/modules/bookings/actions";
 import { STATUS_LABELS } from "@/modules/bookings/schema";
 import { listBookingsForDay } from "@/modules/bookings/service";
+import { manageUrl, reminderText, whatsappLink } from "@/modules/notifications/messages";
 import { listStaff } from "@/modules/staff/service";
 
 export const metadata: Metadata = { title: "Agenda" };
@@ -103,9 +104,33 @@ export default async function Page({ searchParams }: PageProps<"/painel/agenda">
                     <p className="text-sm text-muted">
                       {b.service.name} · {b.staff.name} · {formatCents(b.priceCents)}
                     </p>
-                    <a href={`https://wa.me/55${b.customer.phone}`} target="_blank" rel="noopener noreferrer" className="text-sm text-brand underline-offset-2 hover:underline">
-                      WhatsApp {b.customer.phone.replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3")}
-                    </a>
+                    <div className="flex flex-wrap gap-x-3 text-sm">
+                      <a href={`https://wa.me/55${b.customer.phone}`} target="_blank" rel="noopener noreferrer" className="text-brand underline-offset-2 hover:underline">
+                        WhatsApp {b.customer.phone.replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3")}
+                      </a>
+                      {open && !past && (
+                        <a
+                          href={whatsappLink(
+                            b.customer.phone,
+                            reminderText({
+                              customerName: b.customer.name,
+                              customerPhone: b.customer.phone,
+                              businessName: organization.name,
+                              serviceName: b.service.name,
+                              staffName: b.staff.name,
+                              startsAt: b.startsAt,
+                              timezone: tz,
+                              manageUrl: manageUrl(organization.slug, b.manageToken),
+                            }),
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-brand underline-offset-2 hover:underline"
+                        >
+                          {b.reminderSentAt ? "Lembrete enviado ✓ · reenviar" : "Enviar lembrete"}
+                        </a>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {open && past && <StatusButton id={b.id} status="COMPLETED" label="Concluir" />}

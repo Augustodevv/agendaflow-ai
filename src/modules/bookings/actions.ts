@@ -3,9 +3,10 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { firstIssue, type ActionState } from "@/lib/action-state";
+import { clientFingerprint, hit } from "@/lib/rate-limit";
 import { requireOrg } from "@/lib/session";
 import { ownerStatusSchema, publicBookingSchema } from "./schema";
-import { createPublicBooking, isOverlapError, updateBookingStatus } from "./service";
+import { cancelByCustomer, createPublicBooking, isOverlapError, updateBookingStatus } from "./service";
 
 /** Reserva feita pelo cliente final, sem login. */
 export async function createPublicBookingAction(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -24,9 +25,23 @@ export async function createPublicBookingAction(_: ActionState, formData: FormDa
   });
   if (!parsed.success) return firstIssue(parsed.error);
 
+  // Contra robôs e trotes: por aparelho/rede e por telefone.
+  const fingerprint = await clientFingerprint();
+  if (!(await hit(`book:ip:${fingerprint}`, 8, 10 * 60_000)) || !(await hit(`book:phone:${parsed.data.phone}`, 4, 60 * 60_000))) {
+    return { error: "Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo." };
+  }
+
   const result = await createPublicBooking(slug, parsed.data);
   if (!result.ok) return { error: result.error };
-  redirect(`/agendar/${encodeURIComponent(slug)}/confirmado?id=${result.bookingId}`);
+  redirect(`/agendar/${encodeURIComponent(slug)}/reserva/${result.manageToken}?nova=1`);
+}
+
+export async function cancelPublicBookingAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const slug = String(formData.get("slug") ?? "");
+  const token = String(formData.get("token") ?? "");
+  if (!(await cancelByCustomer(slug, token))) return { error: "Não foi possível cancelar. O horário pode já ter passado." };
+  refresh();
+  return { ok: "Agendamento cancelado. O horário foi liberado." };
 }
 
 export async function updateBookingStatusAction(_: ActionState, formData: FormData): Promise<ActionState> {
