@@ -12,7 +12,7 @@ const features = [
 const faqs = [
   ["O cliente precisa criar conta?", "Não. Ele informa nome e WhatsApp, aceita o uso dos dados e confirma."],
   ["Funciona com mais de um profissional?", "Sim. Cada profissional tem serviços, jornada, folgas e bloqueios próprios, e o cliente pode escolher \"sem preferência\"."],
-  ["Quanto custa?", "Os planos pagos ainda não foram lançados. Enquanto isso, o uso é gratuito e os preços finais serão avisados antes de qualquer cobrança."],
+  ["Quanto custa?", "Veja os planos na página de preços. Os valores são iniciais e nenhuma cobrança acontece sem você assinar."],
   ["O envio automático de WhatsApp está incluso?", "É opcional e exige uma conta na WhatsApp Cloud API da Meta, com cobrança própria dela. Sem isso, você envia o lembrete com um toque pelo seu WhatsApp."],
 ];
 
@@ -83,6 +83,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-sm text-muted">
           <span>© 2026 AgendaFlow AI</span>
           <nav className="flex gap-4">
+            <Link href="/precos" className="hover:text-foreground">Planos</Link>
             <Link href="/privacidade" className="hover:text-foreground">Privacidade</Link>
             <Link href="/termos" className="hover:text-foreground">Termos de uso</Link>
             <a href="https://github.com/Augustodevv/agendaflow-ai/issues" className="hover:text-foreground">Contato</a>

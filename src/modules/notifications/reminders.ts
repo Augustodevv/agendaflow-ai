@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { limitsFor } from "@/modules/billing/plans";
 import { manageUrl } from "./messages";
 import { sendWhatsAppReminder, type ReminderSender } from "./whatsapp";
 
@@ -22,6 +23,8 @@ export async function sendDueReminders({
   let sent = 0;
   const failures: string[] = [];
   for (const b of due) {
+    // Lembrete automático depende do plano (o botão manual na agenda vale para todos).
+    if (!limitsFor(b.organization.plan).autoReminders) continue;
     // Reserva o envio antes de mandar: se o job rodar duas vezes em paralelo, só um envia.
     const claim = await db.booking.updateMany({ where: { id: b.id, reminderSentAt: null }, data: { reminderSentAt: now } });
     if (claim.count === 0) continue;

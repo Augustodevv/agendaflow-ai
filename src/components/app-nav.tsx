@@ -8,6 +8,8 @@ const LINKS = [
   { href: "/painel/agenda", label: "Agenda" },
   { href: "/painel/servicos", label: "Serviços" },
   { href: "/painel/profissionais", label: "Profissionais" },
+  { href: "/painel/ia", label: "IA" },
+  { href: "/painel/assinatura", label: "Assinatura" },
 ];
 
 export function AppNav() {

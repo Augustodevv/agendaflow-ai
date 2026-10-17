@@ -3,16 +3,19 @@
 import { refresh } from "next/cache";
 import { firstIssue, type ActionState } from "@/lib/action-state";
 import { requireOrg } from "@/lib/session";
+import { canActivateStaff } from "@/modules/billing/limits";
 import { listServices } from "@/modules/services/service";
 import { blockToInterval, parseWeek, staffNameSchema, timeBlockSchema } from "./schema";
 import { addTimeBlock, createStaff, removeTimeBlock, setAvailability, setStaffServices, updateStaff } from "./service";
 
 const NOT_FOUND: ActionState = { error: "Profissional não encontrado." };
+const STAFF_LIMIT: ActionState = { error: "Seu plano atingiu o limite de profissionais. Faça upgrade em Assinatura." };
 
 export async function createStaffAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const { organization } = await requireOrg();
   const parsed = staffNameSchema.safeParse({ name: formData.get("name") });
   if (!parsed.success) return firstIssue(parsed.error);
+  if (!(await canActivateStaff(organization))) return STAFF_LIMIT;
   const staff = await createStaff(organization.id, parsed.data.name);
   // Facilita o começo: o novo profissional já realiza todos os serviços ativos.
   const services = await listServices(organization.id, true);
@@ -33,6 +36,7 @@ export async function renameStaffAction(_: ActionState, formData: FormData): Pro
 export async function toggleStaffAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const { organization } = await requireOrg();
   const active = formData.get("active") === "true";
+  if (active && !(await canActivateStaff(organization))) return STAFF_LIMIT;
   if (!(await updateStaff(organization.id, String(formData.get("id")), { active }))) return NOT_FOUND;
   refresh();
   return { ok: active ? "Profissional reativado." : "Profissional pausado: não aparece mais para reservas." };

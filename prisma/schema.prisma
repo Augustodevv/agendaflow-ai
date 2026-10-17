@@ -96,6 +96,7 @@ model Organization {
   timezone  String   @default("America/Sao_Paulo")
   phone     String?
   plan      Plan     @default(FREE)
+  stripeCustomerId String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -106,6 +107,8 @@ model Organization {
   bookings          Booking[]
   availabilityRules AvailabilityRule[]
   timeBlocks        TimeBlock[]
+  subscription      Subscription?
+  aiUsage           AiUsage[]
 }
 
 model Membership {
@@ -252,4 +255,47 @@ model RateLimitHit {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+}
+
+// ---------- Cobrança (Stripe) ----------
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  organizationId       String             @unique
+  stripeSubscriptionId String             @unique
+  plan                 Plan
+  status               SubscriptionStatus
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  updatedAt            DateTime           @updatedAt
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// Um registro por evento do Stripe já processado: garante webhooks idempotentes.
+model WebhookEvent {
+  id          String   @id // id do evento no Stripe (evt_...)
+  type        String
+  processedAt DateTime @default(now())
+}
+
+// ---------- IA: consumo mensal por organização ----------
+
+model AiUsage {
+  id             String       @id @default(cuid())
+  organizationId String
+  month          String // 'YYYY-MM' (UTC)
+  requests       Int          @default(0)
+  inputTokens    Int          @default(0)
+  outputTokens   Int          @default(0)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, month])
 }
