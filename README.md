@@ -2,7 +2,7 @@
 
 SaaS de agendamento para barbearias e profissionais de beleza. Os clientes reservam por uma página pública, sem criar conta, e o dono acompanha agenda e indicadores num painel.
 
-> **Status: código das Fases 1 a 6 escrito e testado; ainda não está no ar.** O núcleo (reservas, agenda, painel, lembretes) foi exercitado de ponta a ponta nos testes automatizados. A **cobrança com Stripe** e a **IA** estão implementadas e testadas com simulações, mas **ainda não foram verificadas contra o Stripe nem contra o provedor de IA reais**, porque dependem de contas e chaves. Também falta o deploy. Veja [o que falta](#o-que-falta-antes-de-vender).
+> **Status: no ar como demonstração.** Demo ao vivo: **https://agendaflow-ai-eta.vercel.app** (página de reservas de exemplo: [/agendar/navalha](https://agendaflow-ai-eta.vercel.app/agendar/navalha)). O fluxo completo foi verificado no site publicado: cadastro, negócio, serviço, profissional com jornada, reserva pela página pública (o horário reservado e os que se sobrepõem somem da grade), agenda e painel. A **cobrança com Stripe** e a **IA** estão implementadas e testadas com simulações, mas **ainda não foram verificadas contra o Stripe nem contra o provedor de IA reais**, porque dependem de contas e chaves. Veja [o que falta](#o-que-falta-antes-de-vender).
 
 ## Capturas de tela
 
@@ -133,7 +133,7 @@ erDiagram
 
 ## O que falta antes de vender
 Honestamente, o código está pronto, mas estes passos precisam de contas e decisões suas:
-1. **Deploy** (ex.: Vercel + PostgreSQL gerenciado) e variáveis de ambiente de produção.
+1. ~~Deploy~~ feito como demonstração (Vercel Hobby + Neon gratuito). Para cobrar clientes: plano Pro da Vercel (o Hobby não permite uso comercial), banco separado para previews e domínio próprio.
 2. **Stripe em modo teste**: rodar o checkout e o webhook de verdade e conferir o plano mudando. Só depois ativar o modo real.
 3. **IA com chave real**: testar os três recursos e medir o custo por geração para validar a margem de cada plano.
 4. **Monitoramento de erros** (ex.: Sentry) e backups do banco.
